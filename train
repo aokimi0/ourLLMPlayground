@@ -1,0 +1,25 @@
+#!/bin/bash
+
+export HF_ENDPOINT=https://hf-api.gitee.com
+
+export HF_HOME=/root/data-tmp
+
+# 创建带有时间戳的日志文件名
+LOG_FILE="training_log_$(date +%Y%m%d_%H%M%S).log"
+
+# 记录开始时间到日志
+echo "配置开始时间: $(date)" | tee $LOG_FILE
+
+# 要么使用预先准备好的配置文件，要么使用PYTHONIOENCODING确保输出正确编码
+# 方法一：使用预先准备好的配置文件（如果有的话）
+accelerate config --config_file=default_config.yaml 2>&1 | tee -a $LOG_FILE
+
+# 方法二：使用PYTHONIOENCODING环境变量并关闭颜色输出
+# echo "运行accelerate配置..." | tee -a $LOG_FILE
+# PYTHONIOENCODING=utf-8 COLORTERM=no accelerate config 2>&1 | tee -a $LOG_FILE
+
+# 记录训练开始
+echo -e "\n训练开始时间: $(date)" | tee -a $LOG_FILE
+
+# 使用PYTHONIOENCODING确保训练输出的正确编码
+PYTHONIOENCODING=utf-8 accelerate launch train.py 2>&1 | tee -a $LOG_FILE 
