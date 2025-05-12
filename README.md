@@ -12,3 +12,7 @@
 
 [bert4torch](https://github.com/Tongjilibo/bert4torch)
 [build_MiniLLM_from_scratch](https://github.com/Tongjilibo/build_MiniLLM_from_scratch)
+
+## log
+
+2025/5/12 参考[hugginface教程](https://huggingface.co/learn/llm-course/chapter7/6?fw=pt)，在V100*16GB*8机器上复现。
