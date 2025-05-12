@@ -5,7 +5,7 @@
 ## intro
 
 欢迎来到 [@aokimi0](https://github.com/aokimi0) 和 [@Frederick2313072](https://github.com/Frederick2313072) 的 LLM 游乐场！
-我们致力于利用现有硬件资源，尽量只依赖 PyTorch,datasets,accelerate,huggingface_hub,transformers(仅基础构件)等基础开源库，手工实现 Transformer，从零构建大语言模型，涵盖预训练、指令微调（对齐）、下游任务应用等全流程。未来还计划尝试用强化学习打造推理模型。
+我们致力于利用现有硬件资源，尽量只依赖 PyTorch,datasets,accelerate,huggingface_hub,transformers(仅基础构件)等开源库，手工实现 Transformer，从零构建大语言模型，涵盖预训练、指令微调（对齐）、下游任务应用等全流程。未来还计划尝试用强化学习打造推理模型。
 
 ## refs
 

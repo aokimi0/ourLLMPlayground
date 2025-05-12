@@ -1,25 +1,79 @@
 #!/bin/bash
 
+# 如果第一个参数是 "log"，实时查看最新的日志文件
+if [ "$1" == "log" ]; then
+    # 找到最新的日志文件
+    LATEST_LOG=$(ls -t training_log_*.log 2>/dev/null | head -n 1)
+    if [ -n "$LATEST_LOG" ]; then
+        echo "正在显示最新日志文件: $LATEST_LOG"
+        echo "按Ctrl+C退出日志查看"
+        echo "-----------------------------------"
+        tail -f "$LATEST_LOG"
+        exit 0
+    else
+        echo "未找到任何日志文件"
+        exit 1
+    fi
+fi
+
+# 如果第一个参数是 "kill"，杀死所有相关进程
+if [ "$1" == "kill" ]; then
+    echo "正在终止所有与train.py相关的进程..."
+    pkill -f "train.py"
+    echo "已发送终止信号，如果进程仍在运行，可以使用强制终止："
+    echo "pkill -9 -f train.py"
+    exit 0
+fi
+
 export HF_ENDPOINT=https://hf-api.gitee.com
 
 export HF_HOME=/root/data-tmp
 
 # 创建带有时间戳的日志文件名
-LOG_FILE="training_log_$(date +%Y%m%d_%H%M%S).log"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+LOG_FILE="training_log_${TIMESTAMP}.log"
+OUTPUT_DIR="/root/data-tmp/codeparrot-ds"
 
-# 记录开始时间到日志
-echo "配置开始时间: $(date)" | tee $LOG_FILE
+# 确保输出目录存在
+mkdir -p "$OUTPUT_DIR"
 
-# 要么使用预先准备好的配置文件，要么使用PYTHONIOENCODING确保输出正确编码
-# 方法一：使用预先准备好的配置文件（如果有的话）
-accelerate config --config_file=default_config.yaml 2>&1 | tee -a $LOG_FILE
-
-# 方法二：使用PYTHONIOENCODING环境变量并关闭颜色输出
-# echo "运行accelerate配置..." | tee -a $LOG_FILE
-# PYTHONIOENCODING=utf-8 COLORTERM=no accelerate config 2>&1 | tee -a $LOG_FILE
+# 使用非交互式配置
+# echo "使用非交互式配置..." | tee -a $LOG_FILE
+# accelerate config default --mixed_precision=fp16 --num_processes=8 2>&1 | tee -a $LOG_FILE
 
 # 记录训练开始
 echo -e "\n训练开始时间: $(date)" | tee -a $LOG_FILE
+echo "模型checkpoint将保存到: $OUTPUT_DIR" | tee -a $LOG_FILE
 
 # 使用PYTHONIOENCODING确保训练输出的正确编码
-PYTHONIOENCODING=utf-8 accelerate launch train.py 2>&1 | tee -a $LOG_FILE 
+# PYTHONIOENCODING=utf-8 accelerate launch train.py --output_dir=$OUTPUT_DIR 2>&1 | tee -a $LOG_FILE
+# 如果要在后台运行，请使用以下命令（取消注释即可）
+# 方法1：使用nohup（推荐，断开终端后进程继续运行）
+nohup bash -c "PYTHONIOENCODING=utf-8 accelerate launch train.py --output_dir=$OUTPUT_DIR 2>&1 | tee -a ${LOG_FILE}" &
+BG_PID=$!
+echo "后台任务已启动，日志文件: ${LOG_FILE}"
+echo "后台进程ID: $BG_PID"
+echo ""
+echo "===== 进程管理帮助 ====="
+echo "1. 查看进程状态:"
+echo "   ps -f -p $BG_PID"
+echo "   或查看所有相关进程:"
+echo "   ps aux | grep train.py"
+echo ""
+echo "2. 实时查看日志内容:"
+echo "   ./train log       # 查看最新的日志文件"
+echo "   tail -f ${LOG_FILE}"
+echo ""
+echo "3. 杀死训练进程:"
+echo "   ./train kill      # 终止所有相关进程"
+echo "   kill $BG_PID      # 发送普通终止信号"
+echo "   kill -9 $BG_PID   # 如果普通终止不成功，强制终止"
+echo "   或终止所有相关进程:"
+echo "   pkill -f train.py"
+echo ""
+echo "4. 查看GPU使用情况:"
+echo "   nvidia-smi"
+echo "===== 进程管理帮助 ====="
+
+# 方法2：简单的后台运行（注意：如果终端关闭，进程可能会终止）
+# PYTHONIOENCODING=utf-8 accelerate launch train.py --output_dir=$OUTPUT_DIR 2>&1 | tee -a $LOG_FILE &

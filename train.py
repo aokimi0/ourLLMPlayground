@@ -25,6 +25,12 @@ from torch.utils.data.dataloader import DataLoader # 如果自定义循环
 from torch.optim import AdamW # 如果自定义循环
 from accelerate import Accelerator # 如果自定义循环
 from huggingface_hub import Repository, get_full_repo_name, login
+import argparse
+
+# 命令行参数解析
+parser = argparse.ArgumentParser(description='训练代码生成模型')
+parser.add_argument('--output_dir', type=str, default="codeparrot-ds", help='模型输出目录')
+args = parser.parse_args()
 
 # --- 配置读取 ---
 with open("config.json", "r") as f:
@@ -40,8 +46,10 @@ os.environ["HUGGINGFACE_TOKEN"] = token
 os.environ["HF_TOKEN"] = token
 os.environ["HF_API_TOKEN"] = token  
 
-print("已设置Hugging Face镜像站环境变量")
-# gitee镜像站不支持login方法，直接跳过，使用环境变量和git凭证
+# 使用环境变量HF_HOME作为输出目录的基础路径
+hf_home = os.environ["HF_HOME"]
+output_dir = os.path.join(hf_home, args.output_dir)
+print(f"已设置Hugging Face镜像站环境变量，模型输出路径: {output_dir}")
 
 # --- 辅助函数 ---
 def any_keyword_in_string(string, keywords):
@@ -146,10 +154,10 @@ data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
 # 方式一: 使用 Hugging Face Trainer (需要用 accelerate launch 或 torchrun 启动此脚本以实现多卡)
 print("\n使用 Hugging Face Trainer 进行训练...")
 training_args = TrainingArguments(
-    output_dir="codeparrot-ds-trainer",
+    output_dir=output_dir, # 使用命令行参数指定的输出目录
     per_device_train_batch_size=32, # 根据你的 GPU 显存调整
     per_device_eval_batch_size=32,
-    evaluation_strategy="steps",  # 修正了这里的参数名
+    eval_strategy="steps",  # 修正了这里的参数名
     eval_steps=500,
     logging_steps=100,
     gradient_accumulation_steps=8, # 根据你的 GPU 数量和 per_device_batch_size 调整
@@ -188,7 +196,7 @@ if training_args.should_save: # trainer.save_model() 也可以
 # train_batch_size = 32 # 这是 per_device_batch_size
 # eval_batch_size = 32
 # gradient_accumulation_steps = 8 # 调整以适应你的总 batch size 需求
-# output_dir_accelerate = "codeparrot-ds-accelerate"
+# output_dir_accelerate = os.path.join(hf_home, "codeparrot-ds-accelerate") # 同样使用hf_home作为基础路径
 # log_interval = 100 # 每多少步打印一次日志
 # eval_interval = 500 # 每多少步评估一次
 # save_interval = 500 # 每多少步保存一次模型
@@ -292,24 +300,50 @@ if training_args.should_save: # trainer.save_model() 也可以
 # --- 推送模型到 Hub (如果需要，确保在主进程执行) ---
 print("\n准备推送模型到 Hub...")
 try:
+    # 导入自定义的push_to_hub函数
+    from model_utils import push_to_hub
+    
     repo_name_on_hub = "aokimi/codeparrot-ds" # 确保这个仓库存在或你有权限创建
     local_model_dir = training_args.output_dir # 如果使用 Trainer
     
-    repo = Repository(
-        local_dir=local_model_dir, # 本地模型文件夹
-        clone_from=repo_name_on_hub, # Hugging Face Hub 上的仓库名
-        use_auth_token=token,
-        # repo_type="model" # 明确指定
+    # 使用model_utils.py中的push_to_hub函数，它已经处理了镜像站的适配
+    success = push_to_hub(
+        model_path=local_model_dir,
+        repo_id=repo_name_on_hub,
+        token=token,
+        use_mirror=True  # 启用镜像站支持
     )
-    # 你可能需要先 commit 和 pull，或者直接 push
-    repo.git_add(auto_lfs_track=True)
-    repo.git_commit("Update model from script training")
-    repo.git_push()
-    print(f"模型尝试推送到 {repo_name_on_hub}")
-    print("请注意：直接使用 Repository 类推送可能需要更细致的 git 操作。")
+    
+    if success:
+        print(f"模型成功推送到 {repo_name_on_hub}")
+    else:
+        print(f"模型推送失败，请查看上方日志")
 
 except Exception as e:
     print(f"推送到 Hub 失败: {e}")
+    import traceback
+    traceback.print_exc()
+    
+    # 提供手动推送的命令
+    print("\n如果需要手动推送，可以执行以下命令：")
+    print(f"cd {local_model_dir}")
+    print("git init")
+    print("# 创建.gitattributes文件支持大文件")
+    print("echo '*.bin filter=lfs diff=lfs merge=lfs -text' > .gitattributes")
+    print("echo '*.safetensors filter=lfs diff=lfs merge=lfs -text' >> .gitattributes")
+    
+    # 根据镜像站配置选择正确的URL
+    hf_endpoint = os.environ.get("HF_ENDPOINT", "")
+    if "gitee.com" in hf_endpoint:
+        print(f"git remote add origin https://gitee.com/huggingface-hub/{repo_name_on_hub}")
+    else:
+        print(f"git remote add origin https://huggingface.co/{repo_name_on_hub}")
+        
+    print("git lfs install")
+    print("git lfs track '*.bin' '*.safetensors'")
+    print("git add --all")
+    print('git commit -m "Add model"')
+    print("git push -u origin main")
 
 
 # --- 推理示例 (如果需要) ---
