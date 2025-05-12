@@ -36,6 +36,11 @@ wheels/
 .cursorrules
 .cursor/
 
+# 检查点
+.ipynb_checkpoints/
+session.pkl
+checkpoint*
+
 # 日志和数据
 *.log
 *.log.*
