@@ -34,36 +34,49 @@
   - HF_HOME：`/root/data-tmp`
   - Token 通过环境变量注入
 
-#### accelerate config
+#### train config
 
-以下为 `default_config.yaml` 的 accelerate 配置，便于多卡/混合精度等训练环境快速复现：
+- **分布式训练配置**：
+  | 配置项 | 说明 | 示例值 |
+  |--------|------|--------|
+  | compute_environment | 计算环境 | LOCAL_MACHINE |
+  | debug | 是否开启调试 | false |
+  | distributed_type | 分布式类型 | MULTI_GPU |
+  | downcast_bf16 | 是否降精度到bf16 | 'no' |
+  | dynamo_config.dynamo_backend | torch dynamo后端 | INDUCTOR |
+  | enable_cpu_affinity | 是否绑定CPU亲和性 | true |
+  | gpu_ids | 使用的GPU编号 | all |
+  | machine_rank | 当前机器编号 | 0 |
+  | main_training_function | 主训练函数名 | main |
+  | mixed_precision | 混合精度类型 | fp16 |
+  | num_machines | 机器总数 | 1 |
+  | num_processes | 进程数 | 8 |
+  | rdzv_backend | rendezvous后端 | static |
+  | same_network | 是否同一网络 | true |
+  | tpu_env | TPU环境变量 | [] |
+  | tpu_use_cluster | 是否使用TPU集群 | false |
+  | tpu_use_sudo | TPU是否用sudo | false |
+  | use_cpu | 是否仅用CPU | false |
 
-| 配置项 | 说明 | 示例值 |
-|--------|------|--------|
-| compute_environment | 计算环境 | LOCAL_MACHINE |
-| debug | 是否开启调试 | false |
-| distributed_type | 分布式类型 | MULTI_GPU |
-| downcast_bf16 | 是否降精度到bf16 | 'no' |
-| dynamo_config.dynamo_backend | torch dynamo后端 | INDUCTOR |
-| enable_cpu_affinity | 是否绑定CPU亲和性 | true |
-| gpu_ids | 使用的GPU编号 | all |
-| machine_rank | 当前机器编号 | 0 |
-| main_training_function | 主训练函数名 | main |
-| mixed_precision | 混合精度类型 | fp16 |
-| num_machines | 机器总数 | 1 |
-| num_processes | 进程数 | 8 |
-| rdzv_backend | rendezvous后端 | static |
-| same_network | 是否同一网络 | true |
-| tpu_env | TPU环境变量 | [] |
-| tpu_use_cluster | 是否使用TPU集群 | false |
-| tpu_use_sudo | TPU是否用sudo | false |
-| use_cpu | 是否仅用CPU | false |
+- **训练参数**：
+  - batch_size：32（每卡）
+  - gradient_accumulation_steps：8
+  - num_train_epochs：1
+  - weight_decay：0.1
+  - warmup_steps：500
+  - learning_rate：5e-4
+  - lr_scheduler_type：cosine
+  - fp16 混合精度训练
+  - eval_steps：500，logging_steps：100
+  - save_steps：500，最多保留 3 个 checkpoint
+  - dataloader_num_workers：4
 
 #### quickstart
 
 ```bash
 bash ./train
 ```
+
 #### data prep
 
 - 训练集：`huggingface-course/codeparrot-ds-train`
@@ -78,21 +91,6 @@ bash ./train
 - 基于 `GPT2LMHeadModel`，使用 `gpt2` 基础配置
 - vocab_size 与 tokenizer 一致，n_ctx=128
 - 模型参数量约 117M（GPT-2 小型版）
-
-#### train config
-
-- Trainer 主要参数：
-  - batch_size：32（每卡）
-  - gradient_accumulation_steps：8
-  - num_train_epochs：1
-  - weight_decay：0.1
-  - warmup_steps：500
-  - learning_rate：5e-4
-  - lr_scheduler_type：cosine
-  - fp16 混合精度训练
-  - eval_steps：500，logging_steps：100
-  - save_steps：500，最多保留 3 个 checkpoint
-  - dataloader_num_workers：4
 
 #### train proc
 
