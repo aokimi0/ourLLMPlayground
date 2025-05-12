@@ -14,12 +14,9 @@
 
 ## log
 
-### codeparrot-ds (2025-05-12)
+### codeparrot-ds (2025-05-12) [[model]](https://ai.gitee.com/aokimi/codeparrot-ds)
 
-在V100*16G*8机器上复现[huggingface教程](https://huggingface.co/learn/llm-course/chapter7/6?fw=pt)
-
-**模型仓库：** [ai.gitee.com/aokimi/codeparrot-ds](https://ai.gitee.com/aokimi/codeparrot-ds)
-
+在V100-16G*8机器上复现[huggingface教程](https://huggingface.co/learn/llm-course/chapter7/6?fw=pt)
 
 #### deps
 
@@ -36,7 +33,8 @@
 
 #### train config
 
-- **分布式训练配置**：
+- **`default_config.yaml` 的 accelerate 配置**：
+
   | 配置项 | 说明 | 示例值 |
   |--------|------|--------|
   | compute_environment | 计算环境 | LOCAL_MACHINE |
@@ -58,18 +56,23 @@
   | tpu_use_sudo | TPU是否用sudo | false |
   | use_cpu | 是否仅用CPU | false |
 
-- **训练参数**：
-  - batch_size：32（每卡）
-  - gradient_accumulation_steps：8
-  - num_train_epochs：1
-  - weight_decay：0.1
-  - warmup_steps：500
-  - learning_rate：5e-4
-  - lr_scheduler_type：cosine
-  - fp16 混合精度训练
-  - eval_steps：500，logging_steps：100
-  - save_steps：500，最多保留 3 个 checkpoint
-  - dataloader_num_workers：4
+- **Trainer 训练参数**：
+
+  | 参数名 | 值 | 说明 |
+  |--------|------|--------|
+  | batch_size | 32 | 每GPU批次大小 |
+  | gradient_accumulation_steps | 8 | 梯度累积步数 |
+  | num_train_epochs | 1 | 训练轮数 |
+  | weight_decay | 0.1 | 权重衰减 |
+  | warmup_steps | 500 | 预热步数 |
+  | learning_rate | 5e-4 | 学习率 |
+  | lr_scheduler_type | cosine | 学习率调度器 |
+  | fp16 | True | 混合精度训练 |
+  | eval_steps | 500 | 评估频率 |
+  | logging_steps | 100 | 日志记录频率 |
+  | save_steps | 500 | 保存检查点频率 |
+  | save_total_limit | 3 | 最大保存检查点数 |
+  | dataloader_num_workers | 4 | 数据加载线程数 |
 
 #### quickstart
 
